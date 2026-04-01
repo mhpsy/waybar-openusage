@@ -10,7 +10,7 @@ from waybar_openusage.plugins import ALL_PLUGINS
 LOCK_FILE = CACHE_DIR / "popup.lock"
 
 # Bar fills notification width (~42 chars in JetBrainsMono 13px / 360px wide)
-BAR_WIDTH = 42
+BAR_WIDTH = 28
 
 
 def _format_resets_at(resets_at) -> str:
@@ -128,7 +128,7 @@ def _build_markup(cache: dict, config: dict) -> str:
     if not sections:
         return "<span color='#6c7086'>No usage data</span>"
 
-    sep = "\n<span color='#45475a'>╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌</span>\n"
+    sep = "\n<span color='#45475a'>╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌</span>\n"
     return sep.join(sections)
 
 
