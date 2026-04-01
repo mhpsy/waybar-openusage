@@ -1,0 +1,20 @@
+// Add this module to your Waybar config
+// Typically at ~/.config/waybar/config.jsonc
+{
+    // Add "custom/openusage" to your modules-right (or modules-left/center):
+    // "modules-right": ["custom/openusage", "clock", "tray"],
+
+    "custom/openusage": {
+        // continuous mode: script keeps running, outputs JSON on each refresh
+        "exec": "waybar-openusage --mode continuous",
+        "return-type": "json",
+        // "once" means Waybar starts the process once and reads lines as they come
+        "interval": "once",
+        "tooltip": true,
+        "format": "{}",
+        // Click to show full usage in notification
+        "on-click": "waybar-openusage --mode once | jq -r .tooltip | xargs -0 notify-send -u low 'AI Usage'",
+        // Right-click to open config
+        "on-click-right": "xdg-open ~/.config/waybar-openusage/config.json"
+    }
+}

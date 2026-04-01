@@ -1,0 +1,32 @@
+/* waybar-openusage styles — add to your ~/.config/waybar/style.css */
+
+#custom-openusage {
+    padding: 0 8px;
+    margin: 0 4px;
+    color: #cdd6f4;
+    font-family: "JetBrainsMono Nerd Font", monospace;
+    font-size: 13px;
+}
+
+#custom-openusage.normal {
+    color: #a6e3a1;
+}
+
+#custom-openusage.warning {
+    color: #f9e2af;
+}
+
+#custom-openusage.critical {
+    color: #f38ba8;
+    animation: blink 1s ease-in-out infinite;
+}
+
+#custom-openusage.error {
+    color: #a6adc8;
+    font-style: italic;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}

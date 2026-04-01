@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "waybar-openusage"
+version = "0.1.0"
+description = "Track AI coding subscription usage in Waybar for Hyprland"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.28",
+]
+
+[project.optional-dependencies]
+encrypted = ["cryptography>=41.0"]
+
+[project.scripts]
+waybar-openusage = "waybar_openusage.main:main"
+
+[tool.setuptools.packages.find]
+include = ["waybar_openusage*"]
