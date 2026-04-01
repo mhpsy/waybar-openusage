@@ -98,14 +98,18 @@ In `~/.config/waybar/config.jsonc`:
     "exec": "/path/to/waybar-openusage/.venv/bin/waybar-openusage --mode continuous",
     "return-type": "json",
     "restart-interval": 5,
-    "tooltip": true,
+    "tooltip": false,
     "format": "{}",
     "max-length": 50,
-    "on-click": "pkill -SIGUSR1 -f waybar-openusage || true"
+    "on-click": "/path/to/waybar-openusage/.venv/bin/waybar-openusage-popup show",
+    "on-click-right": "/path/to/waybar-openusage/.venv/bin/waybar-openusage-popup hide",
+    "on-click-middle": "pkill -SIGUSR1 -f 'waybar-openusage --mode' || true"
 }
 ```
 
 > Replace `/path/to/` with your actual install path.
+>
+> Requires `swaync` as notification daemon (default on most Hyprland setups).
 
 ### 2. Add styles
 
@@ -192,6 +196,16 @@ waybar-openusage --mode once --no-api
 # Verbose logging to stderr
 waybar-openusage --mode once -v
 ```
+
+## Waybar Interaction
+
+| Action | Behavior |
+|--------|----------|
+| **Left click** | Show usage details popup (notification) |
+| **Right click** | Hide the popup |
+| **Middle click** | Refresh data immediately |
+
+The popup displays color-coded progress bars, usage percentages, and reset countdowns for each provider. It stays visible until dismissed with right click.
 
 ## Local HTTP API
 

@@ -99,14 +99,18 @@ waybar-openusage --mode once --plugins claude -v
     "exec": "/path/to/waybar-openusage/.venv/bin/waybar-openusage --mode continuous",
     "return-type": "json",
     "restart-interval": 5,
-    "tooltip": true,
+    "tooltip": false,
     "format": "{}",
     "max-length": 50,
-    "on-click": "pkill -SIGUSR1 -f waybar-openusage || true"
+    "on-click": "/path/to/waybar-openusage/.venv/bin/waybar-openusage-popup show",
+    "on-click-right": "/path/to/waybar-openusage/.venv/bin/waybar-openusage-popup hide",
+    "on-click-middle": "pkill -SIGUSR1 -f 'waybar-openusage --mode' || true"
 }
 ```
 
 > 注意: 将 `/path/to/` 替换为你的实际安装路径。
+>
+> 需要 `swaync` 作为通知守护进程（大多数 Hyprland 配置默认使用）。
 
 ### 2. 添加样式
 
@@ -234,8 +238,11 @@ curl http://127.0.0.1:6736/v1/usage/claude
 
 | 操作 | 行为 |
 |------|------|
-| **悬停** | 显示所有 Provider 的详细用量（进度条 + 重置倒计时） |
-| **左键点击** | 立即刷新数据 |
+| **左键点击** | 显示用量详情弹窗 |
+| **右键点击** | 关闭弹窗 |
+| **中键点击** | 立即刷新数据 |
+
+弹窗显示彩色进度条、用量百分比和重置倒计时，点击右键前会一直保持显示。
 
 ## 项目结构
 

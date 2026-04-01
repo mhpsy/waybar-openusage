@@ -1,22 +1,16 @@
-"""Click-to-toggle popup for waybar-openusage using notify-send."""
+"""Click-to-show / right-click-to-hide popup for waybar-openusage."""
 
-import json
-import os
-import subprocess
 import sys
+import subprocess
 from pathlib import Path
 
 from waybar_openusage.config import CACHE_DIR, load_config, load_cache
-from waybar_openusage.plugins import get_plugin, ALL_PLUGINS
-from waybar_openusage.plugin_base import PluginOutput, ProgressLine, TextLine, BadgeLine
+from waybar_openusage.plugins import ALL_PLUGINS
 
 LOCK_FILE = CACHE_DIR / "popup.lock"
 
-
-def _progress_bar(fraction: float, width: int = 15) -> str:
-    filled = round(fraction * width)
-    empty = width - filled
-    return "█" * filled + "░" * empty
+# Bar fills notification width (~42 chars in JetBrainsMono 13px / 360px wide)
+BAR_WIDTH = 42
 
 
 def _format_resets_at(resets_at) -> str:
@@ -45,8 +39,25 @@ def _format_resets_at(resets_at) -> str:
         return ""
 
 
-def _build_plain_text(cache: dict, config: dict) -> str:
-    """Build plain-text popup content from cache."""
+def _usage_color(fraction: float) -> str:
+    if fraction >= 0.9:
+        return "#f38ba8"
+    if fraction >= 0.7:
+        return "#f9e2af"
+    if fraction >= 0.4:
+        return "#89dceb"
+    return "#a6e3a1"
+
+
+def _progress_bar(fraction: float, color: str = "#a6e3a1") -> str:
+    filled = round(fraction * BAR_WIDTH)
+    empty = BAR_WIDTH - filled
+    bar_filled = "━" * filled
+    bar_empty = "━" * empty
+    return f"<span color='{color}'>{bar_filled}</span><span color='#313244'>{bar_empty}</span>"
+
+
+def _build_markup(cache: dict, config: dict) -> str:
     enabled = config.get("enabled_plugins", [])
     order = config.get("plugin_order", list(ALL_PLUGINS.keys()))
     sections = []
@@ -59,14 +70,13 @@ def _build_plain_text(cache: dict, config: dict) -> str:
         plan = entry.get("plan", "")
         error = entry.get("error")
 
-        header = f"━━ {name}"
+        header = f"<span color='#cdd6f4'><b>{name}</b></span>"
         if plan:
-            header += f"  ({plan})"
-        header += " ━━"
+            header += f"  <span color='#6c7086'><i>{plan}</i></span>"
 
-        lines_strs = []
+        line_strs = []
         if error:
-            lines_strs.append(f"  ⚠ {error}")
+            line_strs.append(f"  <span color='#f38ba8'>⚠ {error}</span>")
         else:
             for line in entry.get("lines", []):
                 ltype = line.get("type")
@@ -74,7 +84,7 @@ def _build_plain_text(cache: dict, config: dict) -> str:
                     used = line.get("used", 0)
                     limit = line.get("limit", 100)
                     fraction = min(1.0, used / limit) if limit > 0 else 0
-                    bar = _progress_bar(fraction)
+                    color = _usage_color(fraction)
 
                     fmt = line.get("format", {})
                     kind = fmt.get("kind", "percent")
@@ -88,62 +98,81 @@ def _build_plain_text(cache: dict, config: dict) -> str:
                     else:
                         value = f"{used}/{limit}"
 
+                    label = line.get("label", "")
+                    line_strs.append(
+                        f"  <span color='#bac2de'>{label}</span>"
+                        f"  <b><span color='{color}'>{value}</span></b>"
+                    )
+                    line_strs.append(f"  {_progress_bar(fraction, color)}")
+
                     reset_str = _format_resets_at(line.get("resetsAt"))
-                    s = f"  {bar}  {line.get('label', '')}: {value}"
                     if reset_str:
-                        s += f"  (resets {reset_str})"
-                    lines_strs.append(s)
+                        line_strs.append(
+                            f"  <span color='#585b70'>↻ resets in {reset_str}</span>"
+                        )
 
                 elif ltype == "text":
-                    lines_strs.append(f"  {line.get('label', '')}: {line.get('value', '')}")
+                    label = line.get("label", "")
+                    val = line.get("value", "")
+                    line_strs.append(
+                        f"  <span color='#bac2de'>{label}</span>  {val}"
+                    )
 
                 elif ltype == "badge":
-                    lines_strs.append(f"  ● {line.get('text', '')}")
+                    text = line.get("text", "")
+                    bcolor = line.get("color") or "#a6adc8"
+                    line_strs.append(f"  <span color='{bcolor}'>● {text}</span>")
 
-        sections.append(header + "\n" + "\n".join(lines_strs))
+        sections.append(header + "\n" + "\n".join(line_strs))
 
-    return "\n\n".join(sections) if sections else "No usage data"
+    if not sections:
+        return "<span color='#6c7086'>No usage data</span>"
+
+    sep = "\n<span color='#45475a'>╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌</span>\n"
+    return sep.join(sections)
 
 
-def _is_popup_visible() -> bool:
-    return LOCK_FILE.exists()
-
-
-def _show_popup(text: str):
+def _show(cache: dict, config: dict):
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    # Show notification
+    # Dismiss any existing openusage notification first
+    subprocess.run(["swaync-client", "--close-latest"], capture_output=True, timeout=3)
+    if LOCK_FILE.exists():
+        LOCK_FILE.unlink()
+
+    markup = _build_markup(cache, config)
+    # -t 0 = no auto-dismiss
     subprocess.run([
         "notify-send",
         "--app-name=openusage",
         "--urgency=low",
+        "-t", "0",
         "AI Usage",
-        text,
+        markup,
     ], capture_output=True, timeout=3)
     LOCK_FILE.write_text("1")
 
 
-def _hide_popup():
-    # Dismiss via swaync
-    subprocess.run(["swaync-client", "--close-latest"],
-                   capture_output=True, timeout=3)
+def _hide():
+    subprocess.run(["swaync-client", "--close-latest"], capture_output=True, timeout=3)
     if LOCK_FILE.exists():
         LOCK_FILE.unlink()
 
 
-def toggle():
-    """Toggle the usage popup on/off."""
+def main():
+    action = sys.argv[1] if len(sys.argv) > 1 else "toggle"
     config = load_config()
     cache = load_cache()
 
-    if _is_popup_visible():
-        _hide_popup()
+    if action == "show":
+        _show(cache, config)
+    elif action == "hide":
+        _hide()
     else:
-        text = _build_plain_text(cache, config)
-        _show_popup(text)
-
-
-def main():
-    toggle()
+        # toggle
+        if LOCK_FILE.exists():
+            _hide()
+        else:
+            _show(cache, config)
 
 
 if __name__ == "__main__":
