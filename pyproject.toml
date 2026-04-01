@@ -18,6 +18,7 @@ encrypted = ["cryptography>=41.0"]
 
 [project.scripts]
 waybar-openusage = "waybar_openusage.main:main"
+waybar-openusage-popup = "waybar_openusage.popup:main"
 
 [tool.setuptools.packages.find]
 include = ["waybar_openusage*"]
